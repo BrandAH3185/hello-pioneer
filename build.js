@@ -1,7 +1,7 @@
 const fs = require('fs');
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_ANON_KEY;
+const url = (process.env.SUPABASE_URL || '').trim();
+const key = (process.env.SUPABASE_ANON_KEY || '').trim();
 
 if (!url || !key) {
   console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
