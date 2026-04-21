@@ -4,8 +4,97 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hello Pioneer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      body { font-family: sans-serif; max-width: 640px; margin: 48px auto; padding: 0 16px; }
+      h1 { margin-bottom: 32px; }
+      form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 40px; }
+      input, textarea { padding: 8px 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+      textarea { height: 80px; resize: vertical; }
+      button { align-self: flex-start; padding: 8px 20px; background: #1a1a1a; color: #fff; border: none; border-radius: 4px; font-size: 15px; cursor: pointer; }
+      button:hover { background: #333; }
+      #notes { display: flex; flex-direction: column; gap: 16px; }
+      .note { border: 1px solid #e5e5e5; border-radius: 6px; padding: 14px 16px; }
+      .note h3 { margin: 0 0 6px; font-size: 16px; }
+      .note p { margin: 0 0 8px; color: #444; }
+      .note time { font-size: 12px; color: #999; }
+      #status { font-size: 14px; color: #666; margin-bottom: 16px; }
+    </style>
   </head>
   <body>
     <h1>hello from Pioneer Species</h1>
+
+    <form id="note-form">
+      <input id="title" type="text" placeholder="Title" required />
+      <textarea id="body" placeholder="Write a note…" required></textarea>
+      <button type="submit">Post note</button>
+    </form>
+
+    <div id="status">Loading notes…</div>
+    <div id="notes"></div>
+
+    <script>
+      const SUPABASE_URL = '__SUPABASE_URL__';
+      const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+
+      const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      async function loadNotes() {
+        const { data, error } = await client
+          .from('notes')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        const status = document.getElementById('status');
+        const container = document.getElementById('notes');
+
+        if (error) {
+          status.textContent = 'Error loading notes: ' + error.message;
+          return;
+        }
+
+        status.textContent = data.length === 0 ? 'No notes yet.' : '';
+        container.innerHTML = data.map(n => `
+          <div class="note">
+            <h3>${escHtml(n.title)}</h3>
+            <p>${escHtml(n.body)}</p>
+            <time>${new Date(n.created_at).toLocaleString()}</time>
+          </div>
+        `).join('');
+      }
+
+      function escHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      document.getElementById('note-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('title').value.trim();
+        const body = document.getElementById('body').value.trim();
+        const btn = e.target.querySelector('button');
+
+        btn.disabled = true;
+        btn.textContent = 'Posting…';
+
+        const { error } = await client.from('notes').insert({ title, body });
+
+        btn.disabled = false;
+        btn.textContent = 'Post note';
+
+        if (error) {
+          alert('Error: ' + error.message);
+          return;
+        }
+
+        e.target.reset();
+        await loadNotes();
+      });
+
+      loadNotes();
+    </script>
   </body>
 </html>
